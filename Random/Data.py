@@ -14,7 +14,7 @@ def getfile():
 
     df['Method']=new[1]
     df['Agent_name']=new[0]
-    #df = df.groupby(['Method','Agent_name', 'Replicate_number'], as_index=False).agg({'Day7_area': 'std'})
+    df = df.groupby(['Method','Agent_name', 'Replicate_number'], as_index=False).agg({'Day7_area': 'std'})
 
     return df
 

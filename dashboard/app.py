@@ -3,9 +3,11 @@ import io
 import base64
 
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
+import plotly.graph_objs as go
 
 import pandas as pd
 
@@ -31,6 +33,9 @@ app.layout = html.Div([
         # Allow multiple files to be uploaded
         multiple=True
     ),
+    dcc.Graph(
+        id='g1'),
+
     html.Div(id='output-data-upload')
 ])
 
@@ -48,15 +53,29 @@ def parse_contents(contents, filename):
         )
     ])
 
-@app.callback(Output('output-data-upload', 'children'),
+@app.callback([Output('output-data-upload', 'children'),
+    Output('g1', 'figure')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')])
 def update_output(list_of_contents, list_of_names):
+    traces = [go.Scatter(
+        x=[1,2,3,4],
+        y=[10,20,30,40],
+        mode='markers'
+    )]
     if list_of_contents is not None:
         children = [
             parse_contents(c, n) for c, n in
             zip(list_of_contents, list_of_names)]
-        return children
+        
+        figure = go.Figure(data=traces)
+        return children, figure
+
+    else:
+
+        raise dash.exceptions.PreventUpdate
+
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)

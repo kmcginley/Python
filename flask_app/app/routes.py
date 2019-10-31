@@ -1,8 +1,8 @@
 from app import flaskInst
 from flask import render_template, url_for, redirect, request, session
 from app.forms import UploadForm
-from werkzeug.datastructures import FileStorage
-from werkzeug.utils import secure_filename
+# from werkzeug.datastructures import FileStorage
+# from werkzeug.utils import secure_filename
 import pandas as pd
 
 @flaskInst.route('/', methods=['GET', 'POST'])
