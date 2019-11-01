@@ -1,26 +1,36 @@
 # To add a new cell, type '#%%'
 # To add a new markdown cell, type '#%% [markdown]'
 #%%
-from IPython import get_ipython
+#from IPython import get_ipython
 
 #%%
 #this script is to make survival curve graphs for multiple (grouped) treatments with columns 'group', 'event', and 'time'
 # the data format includes 0's and 1's for each event observation
+import sys
+#get_ipython().system('{sys.executable} -m pip install lifelines')
 
+#install pandas and matlab plot 
+
+import pandas as pd 
+import matplotlib.pyplot as plt
+
+
+#install kaplan meier fit graphing
+from lifelines import KaplanMeierFitter
 
 # install lifelines package
 def plot1(df):
-    import sys
-    get_ipython().system('{sys.executable} -m pip install lifelines')
+    # import sys
+    # #get_ipython().system('{sys.executable} -m pip install lifelines')
 
-    #install pandas and matlab plot 
+    # #install pandas and matlab plot 
 
-    import pandas as pd 
-    import matplotlib.pyplot as plt
+    # import pandas as pd 
+    # import matplotlib.pyplot as plt
 
 
-    #install kaplan meier fit graphing
-    from lifelines import KaplanMeierFitter
+    # #install kaplan meier fit graphing
+    # from lifelines import KaplanMeierFitter
 
     # import os
     # os.chdir("/Users/MDONEGAN/Downloads")
@@ -44,6 +54,7 @@ def plot1(df):
     plt.ylabel("survival proportion")
     plt.ylim(0,1.05)
 
+    return plt.figure()
 
 #%%
 #this script is to make survival curve graphs for multiple (grouped) treatments
@@ -110,12 +121,13 @@ def plot2(df):
     plt.ylabel("survival proportion")
     plt.ylim(-0.05,1.05)
 
+    return plt.show()
 
 #%%
 # This script runs a pairwise log rank test to compare multi-day survival curves between all treatments
 def plot3(df):
     import sys
-    get_ipython().system('{sys.executable} -m pip install lifelines')
+    #get_ipython().system('{sys.executable} -m pip install lifelines')
 
     #install pandas and matlab plot 
 
