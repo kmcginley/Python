@@ -1,6 +1,7 @@
 import dash
 import io
 import base64
+import re
 
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -13,7 +14,6 @@ import plotly.graph_objs as go
 
 import seaborn as sns, matplotlib.pyplot as plt
 from statannot import add_stat_annotation
-from test import *
 import numpy as np
 import scipy
 from scipy import stats
@@ -48,49 +48,14 @@ app.layout = html.Div([
         ],
         value = 'Distribution'
     ),
-    html.Div([
     dcc.Graph(
-        id='g1')], style={'height':'100%', 'width':'100%'})
+        id='g1'),
 
     # html.Div([html.Img(id='p1', src='')],
     #     id='plot_div'),
 
     # html.Div(id='output-data-upload')
 ])
-
-# modify input csv and save as dataframe
-def leafDisk(df):
-    # signal = difference between two means |x1 - x2|/(sqrt(sd1^2/num + sd2^2/num))
-    # noise = variability of groups themselves
-
-    #df = df[['Agent_name', 'Replicate_number', 'Wells', 'Day7_area', 'Control']]
-    df = df.loc[:,('Agent_name', 'Replicate_number', 'Wells', 'Day7_area', 'Control')]
-    
-    new = df['Agent_name'].str.split('-', expand=True)
-
-    df['Method']=new[1]
-    df['Agent_name']=new[0]
-
-    # get mean for each treatment
-    df1 = df.groupby(['Method','Agent_name'], as_index=False).agg({'Day7_area': 'mean'})
-    df1.rename({'Day7_area':'mean'}, inplace=True, axis=1)
-    df = pd.merge(df, df1, how='left', on=['Agent_name', 'Method'])
-
-    # get standard deviation for each treatment
-    df2 = df.groupby(['Method','Agent_name'], as_index=False).agg({'Day7_area': 'std'})
-    df2.rename({'Day7_area':'std'}, inplace=True, axis=1)
-    df = pd.merge(df, df2, how='left', on=['Agent_name', 'Method'])
-
-    # get number of samples for each treatment
-    df3= df.groupby(['Method','Agent_name'], as_index=False).agg({'Day7_area': 'count'})
-    df3.rename({'Day7_area':'count'}, inplace=True, axis=1)
-    df = pd.merge(df, df3, how='left', on=['Agent_name', 'Method'])
-
-    newdf = df.drop_duplicates(['Agent_name', 'Method'])
-
-    return df, newdf
-
-
 
 # get rows from input csv
 def parse_contents(contents, filename):
@@ -99,7 +64,7 @@ def parse_contents(contents, filename):
     decoded = base64.b64decode(content_string)
 
     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-    #dfTtest = leafDisk(df)[0]
+
     newdf = df
 
     return html.Div([
@@ -107,7 +72,58 @@ def parse_contents(contents, filename):
             data=df.to_dict('records'),
             columns=[{'name': i, 'id': i} for i in df.columns]
         )
-    ]), newdf#, dfTtest
+    ]), newdf
+
+# run t-test and draw line traces
+def get_ttest(mydf, treatments):
+
+    # get max Day7_area value to know where to start drawing line traces
+    maxVal = mydf['Day7_area'].max()
+    lowerLimit = maxVal+0
+    upperLimit = maxVal+1
+    data = []
+    sig = ''
+    treatments.pop(treatments.index('water-auto'))
+
+    for i in treatments:
+        if i[-3:]=='man':
+            water = 'water-man'
+            set1 = mydf[mydf['Agent_name']==i]['Day7_area'].values
+            set2 = mydf[mydf['Agent_name']=='water-man']['Day7_area'].values
+        elif i[-4:]=='auto':
+            water = 'water-auto'
+            set1 = mydf[mydf['Agent_name']==i]['Day7_area'].values
+            set2 = mydf[mydf['Agent_name']=='water-auto']['Day7_area'].values
+        else:
+            water = 'water'
+            set1 = mydf[mydf['Agent_name']==i]['Day7_area'].values
+            set2 = mydf[mydf['Agent_name']=='water']['Day7_area'].values
+
+        ttest = scipy.stats.ttest_ind(set1, set2)
+        if ttest[1] > 0.05:
+            sig = 'ns'
+        elif ttest[1] <= 0.0001:
+            sig = '****'
+        elif ttest[1] <= 0.001:
+            sig = '***'
+        elif ttest[1] <= 0.01:
+            sig = '**'
+        elif ttest[1] <= 0.05:
+            sig = '*'
+
+
+        trace = go.Scatter(
+            x=[i, i, water, water], 
+            y=[lowerLimit, upperLimit, upperLimit, lowerLimit], 
+            mode = 'lines+text', 
+            text=['',sig], 
+            showlegend=False)
+
+        data.append(trace)
+        lowerLimit += 3
+        upperLimit += 3
+
+    return data
 
 @app.callback([#Output('output-data-upload', 'children'),
     Output('g1', 'figure'),
@@ -122,13 +138,14 @@ def update_output(list_of_contents, value, click, list_of_names):
     
 
     if list_of_contents is not None:
-        print(click)
+
         children, mydf = [
             parse_contents(c, n) for c, n in
             zip(list_of_contents, list_of_names)][0]
         
         #array of unique treatments used to build the individual traces
         if value == 'Distribution':
+
             if 'Method' in mydf.columns:
                 mydf['Method'] = [x.split('-')[1] for x in mydf.loc[:, 'Agent_name'].values]
                 mydf = mydf.sort_values('Method')
@@ -137,85 +154,20 @@ def update_output(list_of_contents, value, click, list_of_names):
 
             treatments = [x for x in mydf['Agent_name'].unique()]
             
-            print(treatments)
             data = []
-            x = 1
+
             for i in treatments:
                 trace = go.Box(y=mydf[mydf['Agent_name']==i]['Day7_area'], name = i)
                 data.append(trace)
-                x += 1
-            # get max Day7_area value to know where to start drawing line traces
-            maxVal = mydf['Day7_area'].max()
-            lowerLimit = maxVal+5
-            upperLimit = maxVal+7
-            sig = ''
-            treatments.pop(treatments.index('water-auto'))
-            for i in treatments:
-                if i[-3:]=='man':
-                    set1 = mydf[mydf['Agent_name']==i]['Day7_area'].values
-                    set2 = mydf[mydf['Agent_name']=='water-man']['Day7_area'].values
-                    ttest = scipy.stats.ttest_ind(set1, set2)
-                    if ttest[1] > 0.05:
-                        sig = 'ns'
-                    if ttest[1] <= 0.05:
-                        sig = '*'
-                    if ttest[1] <= 0.01:
-                        sig = '**'
-                    if test[1] <= 0.001:
-                        sig = '***'
-                    if 0.00001 <= 0.0001:
-                        sig = '****'
 
-                    trace = go.Scatter(x=[i, i,'water-man',  'water-man'], y=[lowerLimit,upperLimit, upperLimit, lowerLimit], mode = 'lines+text', text=['',sig], showlegend=False)
-                    data.append(trace)
-                    lowerLimit += 10
-                    upperLimit += 10
 
-                elif i[-4:]=='auto':
-                    set1 = mydf[mydf['Agent_name']==i]['Day7_area'].values
-                    set2 = mydf[mydf['Agent_name']=='water-auto']['Day7_area'].values
-                    ttest = scipy.stats.ttest_ind(set1, set2)
-                    print(float(ttest[1]))
-                    print(ttest[1] < 0.00001)
-                    print(ttest[1] < 1)
-                    if ttest[1] > 0.05:
-                        sig = 'ns'
-                    if ttest[1] <= 0.05:
-                        sig = '*'
-                    if ttest[1] <= 0.01:
-                        sig = '**'
-                    if ttest[1] <= 0.001:
-                        sig = '***'
-                    if ttest[1] <= 0.0001:
-                        sig = '****'
-                    print(sig)
-                    trace = go.Scatter(x=[i, i, 'water-auto',  'water-auto'], y=[lowerLimit,upperLimit, upperLimit, lowerLimit], mode = 'lines+text', text=['',sig], showlegend=False)
-                    data.append(trace)
-                    lowerLimit += 10
-                    upperLimit += 10
+
+            data = data + get_ttest(mydf, treatments)
+
                 
-                else:
-                    set1 = mydf[mydf['Agent_name']==i]['Day7_area'].values
-                    set2 = mydf[mydf['Agent_name']=='water']['Day7_area'].values
-                    ttest = scipy.stats.ttest_ind(set1, set2)
-                    if ttest[1] > 0.05:
-                        sig = 'ns'
-                    if ttest[1] <= 0.05:
-                        sig = '*'
-                    if ttest[1] <= 0.01:
-                        sig = '**'
-                    if test[1] <= 0.001:
-                        sig = '***'
-                    if 0.00001 <= 0.0001:
-                        sig = '****'
-                    trace = go.Scatter(x=[i, i, 'water',  'water'], y=[lowerLimit,upperLimit, upperLimit, lowerLimit], mode = 'lines+text', text=['',sig], showlegend=False)
-                    data.append(trace)
-                    lowerLimit += 10
-                    upperLimit += 10
-                
-# for every treatment, generate a line trace that connects it to the water control
+            # for every treatment, generate a line trace that connects it to the water control
 
-            figure = go.Figure(data=data, layout={'clickmode':'event+select'})
+            figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
             #src = ''
 
             #return children, figure
