@@ -10,13 +10,36 @@ import sys
 #get_ipython().system('{sys.executable} -m pip install lifelines')
 
 #install pandas and matlab plot 
-
+import plotly
 import pandas as pd 
 import matplotlib.pyplot as plt
-
+import matplotlib
+from plotly.tools import mpl_to_plotly
 
 #install kaplan meier fit graphing
 from lifelines import KaplanMeierFitter
+from io import BytesIO
+import base64
+#plotly.offline.iplot_mpl
+matplotlib.use('Agg')
+
+
+def fig_to_uri(in_fig, close_all=True, **save_args):
+    # type: (plt.Figure) -> str
+    """
+    Save a figure as a URI
+    :param in_fig:
+    :return:
+    """
+    out_img = BytesIO()
+    in_fig.savefig(out_img, format='png', **save_args)
+    if close_all:
+        in_fig.clf()
+        plt.close('all')
+    out_img.seek(0)  # rewind file
+    encoded = base64.b64encode(out_img.read()).decode("ascii").replace("\n", "")
+    return "data:image/png;base64,{}".format(encoded)
+
 
 # install lifelines package
 def plot1(df):
@@ -36,10 +59,10 @@ def plot1(df):
     # os.chdir("/Users/MDONEGAN/Downloads")
 
     # import survival data from Experiment 134
-    #survival= pd.read_csv("Book43.csv", sep=',')
+    #survival= pd.read_csv("EXP240_setup.csv")
     survival = df
 
-    ## create an kmf object
+    # create an kmf object
     kmf = KaplanMeierFitter() 
 
     ax = plt.subplot(111)
@@ -54,7 +77,15 @@ def plot1(df):
     plt.ylabel("survival proportion")
     plt.ylim(0,1.05)
 
-    return plt.figure()
+    
+    #return convert_plot(plt.Figure)
+
+    #return plt.Figure
+
+    return fig_to_uri(plt)
+
+
+
 
 #%%
 #this script is to make survival curve graphs for multiple (grouped) treatments

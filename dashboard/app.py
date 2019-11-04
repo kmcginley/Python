@@ -1,25 +1,25 @@
 import dash
 import io
 import base64
-import re
 
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-
 
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import plotly.graph_objs as go
 
-import seaborn as sns, matplotlib.pyplot as plt
-from statannot import add_stat_annotation
 import numpy as np
 import scipy
 from scipy import stats
 import pandas as pd
 
+from survival_plotly import plot1
+
 app = dash.Dash(__name__)
+app.config.suppress_callback_exceptions = True
+
 
 app.layout = html.Div([
     dcc.Upload(
@@ -43,18 +43,16 @@ app.layout = html.Div([
     ),
     dcc.RadioItems(id='radio',
         options=[
-           # {'label': 'Distribution', 'value': 'Distribution'},
-           # {'label': 'T-Test', 'value': 'ttest'}
+            {'label': 'Distribution', 'value': 'Distribution'},
+            {'label': 'T-Test', 'value': 'ttest'}
         ],
         value = 'Distribution'
     ),
-    dcc.Graph(
-        id='g1'),
+    html.Div(id = 'dynamic-controls')
+    # dcc.Graph(id='g1'),
 
-    # html.Div([html.Img(id='p1', src='')],
-    #     id='plot_div'),
+    # html.Img(id='p1', src='')
 
-    # html.Div(id='output-data-upload')
 ])
 
 # get rows from input csv
@@ -126,15 +124,14 @@ def get_ttest(mydf, treatments):
     return data
 
 @app.callback([#Output('output-data-upload', 'children'),
-    Output('g1', 'figure'),
-    #Output('p1', 'src')
-    ],
+    # Output('g1', 'figure'),
+    # Output('p1', 'src')
+    Output('dynamic-controls', 'children')],
     [Input('upload-data', 'contents'),
-    Input('radio', 'value'),
-    Input('g1', 'selectedData')],
+    Input('radio', 'value')],
     [State('upload-data', 'filename')])
 
-def update_output(list_of_contents, value, click, list_of_names):
+def update_output(list_of_contents, value, list_of_names):
     
 
     if list_of_contents is not None:
@@ -146,33 +143,42 @@ def update_output(list_of_contents, value, click, list_of_names):
         #array of unique treatments used to build the individual traces
         if value == 'Distribution':
 
-            if 'Method' in mydf.columns:
-                mydf['Method'] = [x.split('-')[1] for x in mydf.loc[:, 'Agent_name'].values]
-                mydf = mydf.sort_values('Method')
-            else:
-                mydf = mydf.sort_values('Agent_name')
+            try:
+                if 'Method' in mydf.columns:
+                    mydf['Method'] = [x.split('-')[1] for x in mydf.loc[:, 'Agent_name'].values]
+                    mydf = mydf.sort_values('Method')
+                else:
+                    mydf = mydf.sort_values('Agent_name')
 
-            treatments = [x for x in mydf['Agent_name'].unique()]
-            
-            data = []
-
-            for i in treatments:
-                trace = go.Box(y=mydf[mydf['Agent_name']==i]['Day7_area'], name = i)
-                data.append(trace)
-
-
-
-            data = data + get_ttest(mydf, treatments)
-
+                treatments = [x for x in mydf['Agent_name'].unique()]
                 
-            # for every treatment, generate a line trace that connects it to the water control
+                data = []
 
-            figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
-            #src = ''
+                for i in treatments:
+                    trace = go.Box(y=mydf[mydf['Agent_name']==i]['Day7_area'], name = i)
+                    data.append(trace)
 
-            #return children, figure
-            return (figure,)
+                data = data + get_ttest(mydf, treatments)
+    
+                # for every treatment, generate a line trace that connects it to the water control
 
+                figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
+            
+                #return children, figure
+                return (dcc.Graph(figure = figure),)
+            except:
+                return("You've uploaded the wrong file type for the analysis chosen",)
+
+        elif value == 'ttest':
+
+            figure = go.Figure()
+            try:
+                src = plot1(mydf)
+                return (html.Img(src = src),)
+            except:
+                print('wrong file type')
+
+                return ("You've uploaded the wrong file type for the analysis chosen",)
     else:
 
         raise dash.exceptions.PreventUpdate
