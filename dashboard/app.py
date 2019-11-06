@@ -15,7 +15,7 @@ import scipy
 from scipy import stats
 import pandas as pd
 
-from survival_plotly import plot1
+from survival_plotly import *
 
 app = dash.Dash(__name__)
 app.config.suppress_callback_exceptions = True
@@ -48,10 +48,16 @@ app.layout = html.Div([
         ],
         value = 'Distribution'
     ),
-    html.Div(id = 'dynamic-controls')
-    # dcc.Graph(id='g1'),
-
-    # html.Img(id='p1', src='')
+    #html.Div(id='checklist'),
+    dcc.Checklist(id = 'checklist', options=[
+                    {'label': 'Plot 1', 'value': 'p1'},
+                    {'label': 'Plot 2', 'value': 'p2'},
+                    {'label': 'Plot 3', 'value': 'p3'}
+                    ],
+                    value=['p1']),
+    html.Div(id='dynamic-controls1'),
+    html.Div(id='dynamic-controls2'),
+    html.Div(id='df', style={'display': 'none'})
 
 ])
 
@@ -123,20 +129,22 @@ def get_ttest(mydf, treatments):
 
     return data
 
-@app.callback([#Output('output-data-upload', 'children'),
-    # Output('g1', 'figure'),
-    # Output('p1', 'src')
-    Output('dynamic-controls', 'children')],
+
+
+@app.callback([
+    Output('dynamic-controls2', 'children'),
+    Output('radio', 'value2'),
+    Output('df', 'children')],
     [Input('upload-data', 'contents'),
     Input('radio', 'value')],
+    #Input('checklist', 'values')],
     [State('upload-data', 'filename')])
 
 def update_output(list_of_contents, value, list_of_names):
-    
 
     if list_of_contents is not None:
 
-        children, mydf = [
+        children,mydf = [
             parse_contents(c, n) for c, n in
             zip(list_of_contents, list_of_names)][0]
         
@@ -165,24 +173,63 @@ def update_output(list_of_contents, value, list_of_names):
                 figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
             
                 #return children, figure
-                return (dcc.Graph(figure = figure),)
+
+                return dcc.Graph(figure = figure),value, mydf.to_json()
+
             except:
-                return("You've uploaded the wrong file type for the analysis chosen",)
+
+                return "You've uploaded the wrong file type for the analysis chosen",value, mydf.to_json()
 
         elif value == 'ttest':
 
-            figure = go.Figure()
             try:
-                src = plot1(mydf)
-                return (html.Img(src = src),)
+
+                #src = plot1(mydf)
+                # checks = (dcc.Checklist(options=[
+                #     {'label': 'Plot 1', 'value': 'p1'},
+                #     {'label': 'Plot 2', 'value': 'p2'},
+                #     {'label': 'Plot 3', 'value': 'p3'}
+                #     ],
+                #     value=['p1']),)
+
+
+
+
+                return html.Img(src = ''),value, mydf.to_json()
+
             except:
+                
                 print('wrong file type')
 
-                return ("You've uploaded the wrong file type for the analysis chosen",)
+                return "You've uploaded the wrong file type for the analysis chosen",value, mydf.to_json()
     else:
 
         raise dash.exceptions.PreventUpdate
 
+@app.callback([Output('dynamic-controls1', 'children')],
+     [Input('radio', 'value'),
+     Input('checklist', 'value'),
+     Input('df', 'children')])
+
+def checklist(value2, value, mydf):
+    mydf = pd.read_json(mydf)
+
+    try:
+        if value2 == 'ttest':
+            src = plot1(mydf.read_json())
+            print(mydf)
+            return (html.Img(src=src),)
+            # return (dcc.Checklist(options=[
+            #     {'label': 'Plot 1', 'value': 'p1'},
+            #     {'label': 'Plot 2', 'value': 'p2'},
+            #     {'label': 'Plot 3', 'value': 'p3'}
+            # ],
+            # value=['p1']),)
+        elif value2 == 'Distribution':
+
+            return ([],)
+    except:
+        raise dash.exceptions.PreventUpdate
 
 
 if __name__ == "__main__":

@@ -152,7 +152,7 @@ def plot2(df):
     plt.ylabel("survival proportion")
     plt.ylim(-0.05,1.05)
 
-    return plt.show()
+    return fig_to_uri(plt)
 
 #%%
 # This script runs a pairwise log rank test to compare multi-day survival curves between all treatments
@@ -234,3 +234,4 @@ def plot3(df):
         plt.ylabel("survival %")
         plt.ylim(0.4,1.05)
 
+    return fig_to_uri(plt)
