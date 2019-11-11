@@ -1,6 +1,7 @@
 import dash
 import io
 import base64
+import json
 
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -133,14 +134,14 @@ def get_ttest(mydf, treatments):
 
 @app.callback([
     Output('dynamic-controls2', 'children'),
-    Output('radio', 'value2'),
+    #Output('radio', 'value2'),
     Output('df', 'children')],
-    [Input('upload-data', 'contents'),
-    Input('radio', 'value')],
+    [Input('upload-data', 'contents')],
+    #Input('radio', 'value')],
     #Input('checklist', 'values')],
     [State('upload-data', 'filename')])
 
-def update_output(list_of_contents, value, list_of_names):
+def update_output(list_of_contents, list_of_names):
 
     if list_of_contents is not None:
 
@@ -149,59 +150,61 @@ def update_output(list_of_contents, value, list_of_names):
             zip(list_of_contents, list_of_names)][0]
         
         #array of unique treatments used to build the individual traces
-        if value == 'Distribution':
+        #if value == 'Distribution':
 
-            try:
-                if 'Method' in mydf.columns:
-                    mydf['Method'] = [x.split('-')[1] for x in mydf.loc[:, 'Agent_name'].values]
-                    mydf = mydf.sort_values('Method')
-                else:
-                    mydf = mydf.sort_values('Agent_name')
+        try:
+            if 'Method' in mydf.columns:
+                mydf['Method'] = [x.split('-')[1] for x in mydf.loc[:, 'Agent_name'].values]
+                mydf = mydf.sort_values('Method')
+            else:
+                mydf = mydf.sort_values('Agent_name')
 
-                treatments = [x for x in mydf['Agent_name'].unique()]
-                
-                data = []
-
-                for i in treatments:
-                    trace = go.Box(y=mydf[mydf['Agent_name']==i]['Day7_area'], name = i)
-                    data.append(trace)
-
-                data = data + get_ttest(mydf, treatments)
-    
-                # for every treatment, generate a line trace that connects it to the water control
-
-                figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
+            treatments = [x for x in mydf['Agent_name'].unique()]
             
-                #return children, figure
+            data = []
 
-                return dcc.Graph(figure = figure),value, mydf.to_json()
+            for i in treatments:
+                trace = go.Box(y=mydf[mydf['Agent_name']==i]['Day7_area'], name = i)
+                data.append(trace)
 
-            except:
+            data = data + get_ttest(mydf, treatments)
 
-                return "You've uploaded the wrong file type for the analysis chosen",value, mydf.to_json()
+            # for every treatment, generate a line trace that connects it to the water control
 
-        elif value == 'ttest':
+            figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
+        
+            #return children, figure
+            mydf = mydf.to_json()
+            json.dumps(mydf)
+            # print(mydf)
+            return dcc.Graph(figure = figure), mydf
 
-            try:
+        except:
 
-                #src = plot1(mydf)
-                # checks = (dcc.Checklist(options=[
-                #     {'label': 'Plot 1', 'value': 'p1'},
-                #     {'label': 'Plot 2', 'value': 'p2'},
-                #     {'label': 'Plot 3', 'value': 'p3'}
-                #     ],
-                #     value=['p1']),)
+            return "You've uploaded the wrong file type for the analysis chosen", mydf
+
+        # elif value == 'ttest':
+
+        #     try:
+
+        #         #src = plot1(mydf)
+        #         # checks = (dcc.Checklist(options=[
+        #         #     {'label': 'Plot 1', 'value': 'p1'},
+        #         #     {'label': 'Plot 2', 'value': 'p2'},
+        #         #     {'label': 'Plot 3', 'value': 'p3'}
+        #         #     ],
+        #         #     value=['p1']),)
 
 
 
+        #         mydf = mydf.to_json()
+        #         return html.Img(src = ''),value, mydf
 
-                return html.Img(src = ''),value, mydf.to_json()
-
-            except:
+        #     except:
                 
-                print('wrong file type')
+        #         print('wrong file type')
 
-                return "You've uploaded the wrong file type for the analysis chosen",value, mydf.to_json()
+        #         return "You've uploaded the wrong file type for the analysis chosen",value, mydf.to_json()
     else:
 
         raise dash.exceptions.PreventUpdate
@@ -212,24 +215,30 @@ def update_output(list_of_contents, value, list_of_names):
      Input('df', 'children')])
 
 def checklist(value2, value, mydf):
-    mydf = pd.read_json(mydf)
+    print(value2)
+    print(value)
+    print(mydf)
+    #try:
+    mydf = json.loads(mydf)
+    mydf = pd.DataFrame(mydf)
+    #print(mydf)
+    if value2 == 'ttest':
+        src = plot1(mydf)
+        #print(mydf)
+        return (html.Img(src=src),)
+        # return (dcc.Checklist(options=[
+        #     {'label': 'Plot 1', 'value': 'p1'},
+        #     {'label': 'Plot 2', 'value': 'p2'},
+        #     {'label': 'Plot 3', 'value': 'p3'}
+        # ],
+        # value=['p1']),)
+    elif value2 == 'Distribution':
 
-    try:
-        if value2 == 'ttest':
-            src = plot1(mydf.read_json())
-            print(mydf)
-            return (html.Img(src=src),)
-            # return (dcc.Checklist(options=[
-            #     {'label': 'Plot 1', 'value': 'p1'},
-            #     {'label': 'Plot 2', 'value': 'p2'},
-            #     {'label': 'Plot 3', 'value': 'p3'}
-            # ],
-            # value=['p1']),)
-        elif value2 == 'Distribution':
-
-            return ([],)
-    except:
-        raise dash.exceptions.PreventUpdate
+        return ([],)
+    # except:
+    #     raise dash.exceptions.PreventUpdate
+    #     return "you've uploaded the wrong file type for the analysis chosen"
+        
 
 
 if __name__ == "__main__":
