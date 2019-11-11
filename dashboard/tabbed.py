@@ -23,7 +23,7 @@ app = dash.Dash(__name__)
 app.config.suppress_callback_exceptions = True
 
 app.layout = html.Div([
-    html.H1('Dash Tabs component demo'),
+    html.H1('Data Analysis Dashboard', style = {'textAlign': 'center'}),
     dcc.Tabs(id="tabs-example", value='tab-1-example', children=[
         dcc.Tab(label='Leaf Disk', value='tab-1-example'),
         dcc.Tab(label='Survival', value='tab-2-example')]),
@@ -49,7 +49,6 @@ app.layout = html.Div([
                             # Allow multiple files to be uploaded
                             multiple=True
                     )]),
-    html.Div(id='p1'),
     html.Div(id='container', children = [
         dcc.Graph(id='g1', style={'display': 'none'})]),
     html.Div(id='container2', children=[
@@ -59,7 +58,12 @@ app.layout = html.Div([
                     {'label': 'Plot 3', 'value': 'p3'}
                     ],
                     value=['p1'], style={'display': 'none'})
-    ])
+    ]),
+    html.Div([
+    html.Div(id='p1', style={'display': 'inline-block'}),
+    html.Div(id='p2', style={'display': 'inline-block'}),
+    #html.Div(id='p3', style={'display': 'inline-block'})
+]),
 ])
 
 def parse_contents(contents, filename):
@@ -130,61 +134,12 @@ def get_ttest(mydf, treatments):
     return data
 
 
-# @app.callback([#Output('tabs-content-example', 'children'),
-#                 Output('checklist', 'style')],
-#               [Input('tabs-example', 'value')])
-# def render_content(tab):
-#     if tab == 'tab-1-example':
-
-#         # return html.Div([
-#         #             dcc.Upload(
-#         #                 id='upload-data',
-#         #                 children=html.Div([
-#         #                     'Drag and Drop or ',
-#         #                     html.A('Select Files')
-#         #                 ]),
-#         #                 style={
-#         #                     'width': '100%',
-#         #                     'height': '60px',
-#         #                     'lineHeight': '60px',
-#         #                     'borderWidth': '1px',
-#         #                     'borderStyle': 'dashed',
-#         #                     'borderRadius': '5px',
-#         #                     'textAlign': 'center',
-#         #                     'margin': '10px'
-#         #                     },
-#         #                     # Allow multiple files to be uploaded
-#         #                     multiple=True
-#         #             )]),
-#         return ({'display': 'none'},)
-
-#     elif tab == 'tab-2-example':
-
-#         return html.Div([
-#                 dcc.Upload(
-#                     id='upload-data',
-#                     children=html.Div([
-#                         'Drag and Drop or ',
-#                         html.A('Select Files')
-#                     ]),
-#                     style={
-#                         'width': '100%',
-#                         'height': '60px',
-#                         'lineHeight': '60px',
-#                         'borderWidth': '1px',
-#                         'borderStyle': 'dashed',
-#                         'borderRadius': '5px',
-#                         'textAlign': 'center',
-#                         'margin': '10px'
-#         },
-#         # Allow multiple files to be uploaded
-#         multiple=True
-#     )]), {'display': 'block'}
-
 @app.callback([Output('g1', 'figure'),
             Output('g1', 'style'),
             Output('error', 'children'),
             Output('p1', 'children'),
+            Output('p2', 'children'),
+            Output('p3', 'children'),
             Output('checklist', 'style')],
               [Input('tabs-example', 'value'),
               Input('upload-data', 'contents'),
@@ -192,15 +147,10 @@ def get_ttest(mydf, treatments):
               [State('upload-data', 'filename')])
 
 def update_output(tab, list_of_contents, value, list_of_names):
-    #if list_of_contents is not None:
-
-    # child,mydf = [
-    #     parse_contents(c, n) for c, n in
-    #     zip(list_of_contents, list_of_names)][0]
     
     if tab == 'tab-1-example':
         #array of unique treatments used to build the individual traces
-        #if value == 'Distribution':
+
         if list_of_contents is not None:
             child,mydf = [
                 parse_contents(c, n) for c, n in
@@ -224,112 +174,61 @@ def update_output(tab, list_of_contents, value, list_of_names):
 
                 # for every treatment, generate a line trace that connects it to the water control
 
-                figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
+                figure = go.Figure(data=data, layout={'clickmode':'event+select'})
                 
-                return figure, {'display': 'block'}, '', '', {'display':'none'}
+                return figure, {'display': 'inline'}, '', '', '', '', {'display':'none'}
 
             except:
                 figure = go.Figure()
-                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', {'display':'none'})
+                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', '', '', {'display':'none'})
         else:
             figure = go.Figure()
-            src = ''
-            return (figure, {'display':'none'}, '', html.Img(src=src), {'display':'none'})
+            src, src2, src3 = '','',''
+            return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), {'display':'none'})
             #raise dash.exceptions.PreventUpdate
 
     elif tab == 'tab-2-example':
-
+        print(1)
         figure = go.Figure()
-
+        
         if list_of_contents is not None:
-            
+            print(2)
             child,mydf = [
                 parse_contents(c, n) for c, n in
                 zip(list_of_contents, list_of_names)][0]
 
             try:
+                print(3)
                 images = []
+                src, src2, src3 = '', '', ''
                 if 'p1' in value:
+                    src = plot1(mydf)
                     images.append(plot1(mydf))
                 if 'p2' in value:
+                    src2 = plot2(mydf)
                     images.append(plot2(mydf))
                 if 'p3' in value:
+                    src3 = plot3(mydf)
                     images.append(plot3(mydf))
-                    
-                return (figure, {'display':'none'}, '', [html.Img(images[i]) for i in images], {'display':'none'})
-                #return (figure, {'display':'none'}, '', [html.Img(src=src), html.Img(src=src2)], {'display':'none'})
+                
+                #return (figure, {'display':'none'}, '', [html.Img(images)], {'display':'block'})
+                return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), {'display':'inline-block'})
             except:
-
+                print(4)
                 figure = go.Figure()
-                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', {'display':'none'})
+                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', '', '', {'display':'none'})
 
         else:
             print(6)
-            src = ''
-            return (figure, {'display':'none'}, '', html.Img(src=src), {'display':'block'})
-            
-            #raise dash.exceptions.PreventUpdate
-
-
-            #     return (figure, {'display':'none'}, '', html.Img(src=src), {'display':'none'})
-            # except:
-                
-            #     return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', {'display':'block'})
+            src, src2, src3 = '','',''
+            return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), {'display':'inline-block'})
 
     else:
+        print(5)
         raise dash.exceptions.PreventUpdate
 
             
 
-
-
-# @app.callback([Output('p1', 'children')],
-#             [Input('upload-data', 'contents'),
-#             Input('checklist', 'value')],
-#             [State('upload-data', 'filename')]
-# )
-
-# def update_output(list_of_contents, value, list_of_names):
-#     if list_of_contents is not None:
-        
-#         child, mydf = [
-#             parse_contents(c, n) for c, n in
-#             zip(list_of_contents, list_of_names)][0]
-        
-#         #array of unique treatments used to build the individual traces
-#         #if value == 'Distribution':
-
-#         try:
-#             src = plot1(mydf)
-#             #print(mydf)
-#             return (html.Img(src=src),)
-            
-            
-#         #     if 'Method' in mydf.columns:
-#         #         mydf['Method'] = [x.split('-')[1] for x in mydf.loc[:, 'Agent_name'].values]
-#         #         mydf = mydf.sort_values('Method')
-#         #     else:
-#         #         mydf = mydf.sort_values('Agent_name')
-
-#         #     treatments = [x for x in mydf['Agent_name'].unique()]
-            
-#         #     data = []
-
-#         #     for i in treatments:
-#         #         trace = go.Box(y=mydf[mydf['Agent_name']==i]['Day7_area'], name = i)
-#         #         data.append(trace)
-
-#         #     data = data + get_ttest(mydf, treatments)
-
-#         #     # for every treatment, generate a line trace that connects it to the water control
-
-#         #     figure = go.Figure(data=data, layout={'height':800, 'clickmode':'event+select'})
-
-#         #     return figure, {'display': 'block'}
-
-#         except:
-
-#             return ("You've uploaded the wrong file type for the analysis chosen",)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
