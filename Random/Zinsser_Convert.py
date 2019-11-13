@@ -46,6 +46,7 @@ for code in qrCodes:
         vials.extend(int(code.split('_')[1]) - (24*(k-1)) for i in range(1, 13))
     else:
         vials.extend(code.split('_')[1] for i in range(1, 13))
+        
     sourceRack.extend(['Source_' + str(k)]*12)
     destRack.extend(['Dest_'+ str(x)]*12)
 

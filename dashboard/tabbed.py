@@ -24,9 +24,9 @@ app.config.suppress_callback_exceptions = True
 
 app.layout = html.Div([
     html.H1('Data Analysis Dashboard', style = {'textAlign': 'center'}),
-    dcc.Tabs(id="tabs-example", value='tab-1-example', children=[
-        dcc.Tab(label='Leaf Disk', value='tab-1-example'),
-        dcc.Tab(label='Survival', value='tab-2-example')]),
+    dcc.Tabs(id="tabs-example", value='leafdisk', children=[
+        dcc.Tab(label='Leaf Disk', value='leafdisk'),
+        dcc.Tab(label='Survival', value='survival')]),
     #html.Div(id='tabs-content-example'),
     html.Div(id='error'),
     html.Div([
@@ -57,12 +57,13 @@ app.layout = html.Div([
                     {'label': 'Plot 2', 'value': 'p2'},
                     {'label': 'Plot 3', 'value': 'p3'}
                     ],
-                    value=['p1'], style={'display': 'none'})
+                    value=[''], style={'display': 'none'})
     ]),
     html.Div([
     html.Div(id='p1', style={'display': 'inline-block'}),
     html.Div(id='p2', style={'display': 'inline-block'}),
     #html.Div(id='p3', style={'display': 'inline-block'})
+    html.Div(id='t1', style={'display': 'inline-block'})
 ]),
 ])
 
@@ -140,6 +141,7 @@ def get_ttest(mydf, treatments):
             Output('p1', 'children'),
             Output('p2', 'children'),
             Output('p3', 'children'),
+            Output('t1', 'children'),
             Output('checklist', 'style')],
               [Input('tabs-example', 'value'),
               Input('upload-data', 'contents'),
@@ -148,7 +150,7 @@ def get_ttest(mydf, treatments):
 
 def update_output(tab, list_of_contents, value, list_of_names):
     
-    if tab == 'tab-1-example':
+    if tab == 'leafdisk':
         #array of unique treatments used to build the individual traces
 
         if list_of_contents is not None:
@@ -176,19 +178,18 @@ def update_output(tab, list_of_contents, value, list_of_names):
 
                 figure = go.Figure(data=data, layout={'clickmode':'event+select'})
                 
-                return figure, {'display': 'inline'}, '', '', '', '', {'display':'none'}
+                return figure, {'display': 'inline'}, '', '', '', '', '', {'display':'none'}
 
             except:
                 figure = go.Figure()
-                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', '', '', {'display':'none'})
+                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', '', '', '', {'display':'none'})
         else:
             figure = go.Figure()
-            src, src2, src3 = '','',''
-            return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), {'display':'none'})
-            #raise dash.exceptions.PreventUpdate
+            src, src2, src3, t1 = '','','', ''
+            return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), t1, {'display':'none'})
 
-    elif tab == 'tab-2-example':
-        print(1)
+    elif tab == 'survival':
+        
         figure = go.Figure()
         
         if list_of_contents is not None:
@@ -198,33 +199,33 @@ def update_output(tab, list_of_contents, value, list_of_names):
                 zip(list_of_contents, list_of_names)][0]
 
             try:
-                print(3)
-                images = []
-                src, src2, src3 = '', '', ''
+               
+                src, src2, src3, t1 = '', '', '', ''
                 if 'p1' in value:
                     src = plot1(mydf)
-                    images.append(plot1(mydf))
+                    
                 if 'p2' in value:
                     src2 = plot2(mydf)
-                    images.append(plot2(mydf))
+                    
                 if 'p3' in value:
                     src3 = plot3(mydf)
-                    images.append(plot3(mydf))
+                    
+                    
                 
-                #return (figure, {'display':'none'}, '', [html.Img(images)], {'display':'block'})
-                return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), {'display':'inline-block'})
+                
+                return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), t1, {'display':'inline-block'})
             except:
-                print(4)
+                
                 figure = go.Figure()
-                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', '', '', {'display':'none'})
+                return (figure, {'display':'none'}, "You've uploaded the wrong file type for the analysis chosen", '', '', '', '',{'display':'none'})
 
         else:
-            print(6)
-            src, src2, src3 = '','',''
-            return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), {'display':'inline-block'})
+            
+            src, src2, src3, t1 = '','','',''
+            return (figure, {'display':'none'}, '', html.Img(src=src),html.Img(src=src2),html.Img(src=src3), t1, {'display':'inline-block'})
 
     else:
-        print(5)
+        
         raise dash.exceptions.PreventUpdate
 
             
