@@ -8,9 +8,11 @@ import pandas as pd
 import os
 
 def generateBarcodeFile():
+    localPath = '/Users/kmcginley/Documents/Programming/Personal/Python/Barcode Generation/SMP_Barcodes.csv'
+    remotePath = '/Users/kmcginley/VL43/Laboratory Operations - Documents/Barcode Labels/SMP_Barcodes.csv'
     
     ''' open last generated barcode file, and get the last used ID'''
-    df = pd.read_csv('/Users/kmcginley/VL43/Laboratory Operations - Documents/Barcode Labels/SMP_Barcodes.csv')
+    df = pd.read_csv(remotePath)
     lastBarcode = df['Barcode'].iloc[0]
     #lastBarcode = 'SMP002100'
     barcodeList = []
@@ -28,8 +30,8 @@ def generateBarcodeFile():
     contents = contents.iloc[::-1]
     
 
-    outFile = contents.to_csv('/Users/kmcginley/VL43/Laboratory Operations - Documents/Barcode Labels/SMP_Barcodes.csv', index=False)
-    outFile2 = contents.to_csv('/Users/kmcginley/Documents/Programming/Personal/Python/Barcode Generation/SMP_Barcodes.csv', index=False)
+    outFile = contents.to_csv(remotePath, index=False)
+    outFile2 = contents.to_csv(localPath, index=False)
     
     return outFile, outFile2
 
