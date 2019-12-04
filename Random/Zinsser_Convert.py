@@ -13,14 +13,16 @@ If there are > 24 agents, make sure the source rack increases by 1 and the sourc
 import pandas as pd
 
 
-importFile = pd.read_csv('/Users/kmcginley/Downloads/Experiment QR (1).csv')
+importFile = pd.read_csv('/Users/kmcginley/Downloads/Experiment QR (2).csv')
 
+a = importFile[(importFile['Agent']=='water') | (importFile['Agent']=='rifampicin')]
+b = importFile[(importFile['Agent']!='water') & (importFile['Agent']!='rifampicin')]
+mydf = pd.concat([b,a])
 
-
-mydf = pd.DataFrame(importFile)
-
-mydf['SourcePos'] = [x.split('_')[1] for x in mydf.loc[:, 'QR Code']]
-agentRef = mydf[['Agent', 'SourcePos']].drop_duplicates()
+agentRef = mydf[['Agent', 'QR Code']].drop_duplicates()
+agentRef = agentRef.rename(columns={'QR Code':'DestBC'})
+agentRef['SourcePos'] = agentRef.groupby(['Agent'], sort = False).ngroup()
+agentRef['SourcePos'] = agentRef['SourcePos'] + 1
 
 
 qrCodes = mydf.loc[:, 'QR Code']
@@ -31,35 +33,70 @@ sourceRack = []
 destRack = []
 
 x = 1
-k = 0
+k = 1
 for code in qrCodes:
     if barcodes:
         if code != barcodes[-1]:
             x += 1
     barcodes.extend([code]*12)
     if code.split('_')[2]=='1':
-        if int(code.split('_')[1]) % 24 == 1:
+        # if the treatment number is 26/52 this indicates to use the next vial holder
+        if int(code.split('_')[1]) in [27, 52]:
             k += 1
     # add 12 dest wells
     wells.extend(i for i in range(1,13))
-    if k > 1:
-        vials.extend(int(code.split('_')[1]) - (24*(k-1)) for i in range(1, 13))
-    else:
-        vials.extend(code.split('_')[1] for i in range(1, 13))
-        
+    
+    # if k > 1:
+    #     vials.extend(int(code.split('_')[1]) - (24*(k-1)) for i in range(1, 13))
+    # else:
+    #     vials.extend(code.split('_')[1] for i in range(1, 13))
+     
     sourceRack.extend(['Source_' + str(k)]*12)
     destRack.extend(['Dest_'+ str(x)]*12)
 
 
-outputDf = pd.DataFrame(data = {'SourceRack': sourceRack, 'SourcePos': vials, 'DestRack': destRack, 'DestBC': barcodes, 'DestPos': wells})
+
+
+outputDf = pd.DataFrame(data = {'SourceRack': sourceRack,'DestRack': destRack, 'DestBC': barcodes, 'DestPos': wells})
 outputDf['SourceTyp'] = 'Rack_8ml'
-outputDf['SourceVol[ul'] = 5000
+outputDf['SourceVol[ul]'] = 5000
 outputDf['DestTyp'] = 'Plate_12'
 outputDf['SprayVol'] = 84
-outputDf = outputDf[['SourceRack','SourceTyp','SourcePos','SourceVol[ul', 'DestRack', 'DestBC', 'DestTyp', 'DestPos', 'SprayVol']]
+outputDf = outputDf[['SourceRack','SourceTyp','SourceVol[ul]', 'DestRack', 'DestBC', 'DestTyp', 'DestPos', 'SprayVol']]
 
-outputDf = pd.merge(outputDf, agentRef, how='left', on='SourcePos')
+print(agentRef)
+outputDf = pd.merge(outputDf, agentRef, how='left', on='DestBC')
+sourcepositions = outputDf['SourcePos']
+newpos = []
+newrack = []
+rackcounter = 1
+counter = 0
 
-outputDf.to_csv('/Users/kmcginley/Downloads/Zinsser_Output.csv', index=False)
+for pos in sourcepositions:
+    if pos in [25, 49]:
+        if pos >= 25:
+            rackcounter = 2
+        elif pos >= 49:
+            rackcounter = 3
+        pos = 1
+        counter += 1
+        newpos.append(pos)
+        
+        newrack.append('Source_'+str(rackcounter))    
+    elif counter > 0:
+        newpos.append(pos-24)
+        newrack.append('Source_'+str(rackcounter))
+        
+    else:
+        newpos.append(pos)
+        newrack.append('Source_'+str(rackcounter))
+        
+print(rackcounter)
+outputDf['SourcePos'] = newpos
+outputDf['SourceRack'] = newrack
+outputDf = outputDf[['SourceRack','SourceTyp','SourcePos','SourceVol[ul]', 'DestRack', 'DestBC', 'DestTyp', 'DestPos', 'SprayVol', 'Agent']]
+print(outputDf)
+path = '/Users/kmcginley/Downloads/{}_Zinsser_Input.csv'.format(qrCodes[0].split('_')[0])
+outputDf.to_csv(path, index=False)
 
 
