@@ -8,12 +8,10 @@ Take agent number from barcode and apply that to the sourcepos column of the zin
 If there are > 24 agents, make sure the source rack increases by 1 and the source pos resets to 1
 '''
 
-
-
 import pandas as pd
 
 
-importFile = pd.read_csv('/Users/kmcginley/Downloads/Experiment QR (2).csv')
+importFile = pd.read_csv('/Users/kmcginley/Downloads/EXP19000598 QR codes.csv')
 
 a = importFile[(importFile['Agent']=='water') | (importFile['Agent']=='rifampicin')]
 b = importFile[(importFile['Agent']!='water') & (importFile['Agent']!='rifampicin')]
@@ -44,13 +42,7 @@ for code in qrCodes:
         if int(code.split('_')[1]) in [27, 52]:
             k += 1
     # add 12 dest wells
-    wells.extend(i for i in range(1,13))
-    
-    # if k > 1:
-    #     vials.extend(int(code.split('_')[1]) - (24*(k-1)) for i in range(1, 13))
-    # else:
-    #     vials.extend(code.split('_')[1] for i in range(1, 13))
-     
+    wells.extend(i for i in range(1,13))  
     sourceRack.extend(['Source_' + str(k)]*12)
     destRack.extend(['Dest_'+ str(x)]*12)
 
@@ -80,8 +72,7 @@ for pos in sourcepositions:
             rackcounter = 3
         pos = 1
         counter += 1
-        newpos.append(pos)
-        
+        newpos.append(pos) 
         newrack.append('Source_'+str(rackcounter))    
     elif counter > 0:
         newpos.append(pos-24)
