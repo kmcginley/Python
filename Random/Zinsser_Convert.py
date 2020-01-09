@@ -11,7 +11,7 @@ If there are > 24 agents, make sure the source rack increases by 1 and the sourc
 import pandas as pd
 
 
-importFile = pd.read_csv('/Users/kmcginley/Downloads/EXP19000598 QR codes.csv')
+importFile = pd.read_csv('/Users/kmcginley/Downloads/EXP20000011.csv')
 
 a = importFile[(importFile['Agent']=='water') | (importFile['Agent']=='rifampicin')]
 b = importFile[(importFile['Agent']!='water') & (importFile['Agent']!='rifampicin')]

@@ -1,0 +1,69 @@
+with t1 as(
+select qr_code, 
+				t.plate_id, date_measured, rep_num, well_pos, ep.experiment_treatment_id, treatment_inputs,
+                d.j ->> 'leaf_health' as leaf_health,
+                d.j ->> 'insect_area' as insect_area,
+                d.j ->> 'leaf_area' as leaf_area,
+                d.j ->> 'insect_mass' as insect_mass,
+                d.j ->> 'comments' as comments,
+                d.j ->> 'F0_survival' as F0_survival,
+                d.j ->> 'plant_mass' as plant_mass
+            from discovery.experiment_raw_data t
+            
+            left join lateral (
+                select jsonb_object_agg(jb ->> 'name', jb ->> 'value')
+                from jsonb_array_elements(data) jb) as d(j) on true
+			
+            left join discovery.experiment_plates ep on t.plate_id = ep.id
+            left join discovery.experiment_treatments et on ep.experiment_treatment_id = et.id
+			--left join discovery.experiment_analyzed_data ad on ep.experiment_treatment_id = ad.experiment_treatment_id
+			where plate_id > 66
+			order by qr_code),
+	
+	
+t2 as(
+select plate_id, rep_num, well_pos, experiment_treatment_id, treatment_inputs,
+       min(date_measured) as date1, 
+       max(date_measured) as date2, 
+       qr_code,
+       (array_agg(insect_area order by date_measured))[1] as insect_area0,
+       (array_agg(insect_area order by date_measured desc))[1] as insect_area7,
+	   (array_agg(leaf_health order by date_measured))[1] as leaf_health0,
+       (array_agg(leaf_health order by date_measured desc))[1] as leaf_health7,
+	   (array_agg(leaf_area order by date_measured))[1] as leaf_area0,
+       (array_agg(leaf_area order by date_measured desc))[1] as leaf_area7,
+	   (array_agg(insect_mass order by date_measured))[1] as insect_mass0,
+       (array_agg(insect_mass order by date_measured desc))[1] as insect_mass7
+	
+from t1
+where insect_area is not null
+group by plate_id, qr_code, rep_num, well_pos, experiment_treatment_id, treatment_inputs
+order by qr_code, well_pos),
+
+t3 as(
+select distinct on (t2.plate_id) t2.plate_id, t2.qr_code, t2.rep_num, t2.well_pos, t2.experiment_treatment_id, t2.treatment_inputs, t2.date1, t2.date2, t2.insect_area0,t2.insect_area7,
+t2.leaf_health0,t2.leaf_health7,t2.leaf_area0,t2.leaf_area7,t2.insect_mass0,t2.insect_mass7, ec.batch,
+				ad.data ->> 'good_wells' as good_wells,
+				ad.data ->> 'd0_area_std' as d0_area_std,
+				ad.data ->> 'phytotoxic' as phytotoxic,
+				ad.data ->> 'percent_control' as percent_control,
+				ad.data ->> 'd7_area_std' as d7_area_std,
+				ad.data ->> 'd0_area_mean' as d0_area_mean,
+				ad.data ->> 'F0_surv' as F0_surv,
+				ad.data ->> 'good_leaves' as good_leaves,
+				ad.data ->> 'd7_area_mean' as d7_area_mean,
+				ad.data ->> 'QC' as QC,
+				ad.data ->> 'd7_pval_n' as d7_pval_n,
+				ad.data ->> 'status' as status,
+				ad.data ->> 'd0_pval_n' as d0_pval_n,
+				ad.data ->> 'effect_size' as effect_size
+from t2
+left join discovery.experiment_plates ep on t2.plate_id = ep.id
+left join discovery.experiment_analyzed_data ad on ep.experiment_treatment_id = ad.experiment_treatment_id
+left join discovery.experiment_treatments_and_components tc on ep.experiment_treatment_id = tc.treatment_id
+left join discovery.experiment_components ec on tc.component_id = ec.id
+
+)
+
+select *
+from t3
