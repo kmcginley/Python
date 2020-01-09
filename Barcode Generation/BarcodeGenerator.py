@@ -14,7 +14,7 @@ def generateBarcodeFile():
     ''' open last generated barcode file, and get the last used ID'''
     df = pd.read_csv(remotePath)
     lastBarcode = df['Barcode'].iloc[0]
-    #lastBarcode = 'SMP002100'
+    #lastBarcode = 'SMP003134'
     barcodeList = []
 
     x = 1
@@ -23,6 +23,7 @@ def generateBarcodeFile():
             bc = 'SMP00'+ str(int(lastBarcode[-4::]) + x)
             barcodeList.append(bc)
         x += 1
+    #barcodeList = ['SMP00'+ str(int(lastBarcode[-4::]) + x) for x in range(1,121)]
 
     contents = pd.DataFrame({'Barcode':barcodeList})
 
